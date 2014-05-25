@@ -1,8 +1,10 @@
 import java.util.*;
 
 public class CLCSFast {
-	static int[][] arr = new int[2048][2048];
-	static char[] A, B;
+	static int[][] arr = new int[2*2048][2048];
+	static char[] A, B; //String A and B
+	static char[] Aext = new char[2*2048]; //2x repetition of string A ("A extended").
+	static int m, n;
 	
 	// Path is stored as the implied table limits for subproblems above and below.
 	// Limits are inclusive.
@@ -13,23 +15,21 @@ public class CLCSFast {
 	// which is the largest index, since using inverted y coordinates,
 	// ascending downwards).
 	//
-	// To find the right most element to include in the table underneith and left
-	// of path p in/ row r, look up path_lims_LR[p][r][L].  This is numerically
+	// To find the right most element to include in the table underneath and left
+	// of path p in row r, look up path_lims_LR[p][r][L].  This is numerically
 	// largest index in this row.
 	static int U = 0;
 	static int D = 1;
 	static int L = 0;
 	static int R = 1; // right limit
-	static int[][][] path_lims_UD = new int[2*2048][2048][2]; // Cache efficient for filling
-	static int[][][] path_lims_LR = new int[2*2048][2048][2]; // Cache efficient for filling
+	static int[][][] path_lims_UD = new int[2048 + 1][2048][2]; // Cache efficient for filling
+	static int[][][] path_lims_LR = new int[2048 + 1][2048][2]; // Cache efficient for filling
 
 	static int CLCS() {
-		int m = A.length;
-		int n = B.length;
+		m = A.length;
+		n = B.length;
 		
 		int LCS_lengths[] = new int[m+1];
-		
-		char[] Aext = new char[2*m];
 		
 		// Make a 2x repeat of A, call it Aext (A extended)
 		{
@@ -72,15 +72,12 @@ public class CLCSFast {
 			path_lims_LR[m][i][L] = path_lims_LR[0][i-m][L]; // Should never be used
 		}
 
-		
+
+		//
 		// Do recursive calls here:
-		// TODO
-		// TODO
-		// TODO
-		// TODO
-		
-	
-		
+		//
+		FindShortestPaths(0,m);
+
 		
 		// Determine the longest of the LCSs to return.
 		int maxlen=-1;
@@ -93,7 +90,7 @@ public class CLCSFast {
 
 
 	static int First_LCS_PathFill(final char[] A, final char[] B) {
-		int m = A.length, n = B.length;
+		//int m = A.length, n = B.length;
 		int i, j;
 		final int p = 0;
 		
@@ -171,7 +168,150 @@ public class CLCSFast {
 		
 		return arr[m][n];
 	}
+	
+	static void FindShortestPaths(int upper, int lower) {
+		//TODO: Base Case
+		
+		SingleShortestPaths((upper+lower)/2, upper, lower);
+		
+		//TODO: Recursive Calls
+	}
+	
+	static void printArr() {
+		for(int j = 0; j<=2*m; j++) {
+			for(int i=0; i<=n; i++) {
+				System.out.print(arr[j][i]);
+				System.out.print(" ");
+			}
+			System.out.println();
+		}
+	}
+	
+	static void SingleShortestPaths(int mid, int upper, int lower) {
+		int i, j;
+		final int p = mid;
+		
+		// FIXME
+		// FIXME DEBUG USE ONLY
+		// FIXME
+		for(i=0; i<=2*m; i++)
+			for(j=0; j<=n; j++)
+				arr[i][j] = -2;
+		
+		// Fill leftmost column in appropriate spots
+		//for (i = 0; i <= 2*m; i++)
+		//	arr[i][0] = 0;
+		for(i = mid; i <= path_lims_UD[lower][0][U]; i++)
+			arr[i][0] = 0;
+		// Fill uppermost row in appropriate spots
+		//for (j = 0; j <= n; j++)
+		//	arr[0][j] = 0;
+		j = 0;
+		while(j <= path_lims_LR[upper][mid][L])
+			arr[mid][j++] = 0;
+		
+		//FIXME: Debug Use
+		System.out.println(mid);
+		printArr();
+		
+		i=i; //FIXME: Debug breakpoint spot
+		
+		//Traverse an m-wide band, starting at mid+1  (the zeroes row above it already full)
+		for (i = mid + 1; i <= mid + m; i++) {
+			//Traverse the row, starting at the left-limit imposed by the lower bounding path,
+			//but no less than 1, because of the zero column
+			int left_limit = (path_lims_LR[lower][i][R] > 1) ? path_lims_LR[lower][i][R] : 1;
+			//...path ends at right-limit of row, which is fully defined by upper bounding path.
+			int right_limit = path_lims_LR[upper][i][L];
+			
+			for (j = left_limit; j <= right_limit; j++) {
+				arr[i][j] = Math.max(arr[i - 1][j], arr[i][j - 1]);
+				if (Aext[i - 1] == B[j - 1])
+					arr[i][j] = Math.max(arr[i][j], arr[i - 1][j - 1] + 1);
+			}
+		}
 
+		//FIXME: Debug Use
+		System.out.println(mid);
+		printArr();
+		
+		//Rewind to the bottom right corner.
+		i--;
+		j--;
+		
+		// Print the number of matches.
+		System.out.println("Matches = " + arr[i][j]);
+
+		//
+		// Walk the path backwards from arr[i][j], and fill the limits accordingly
+		//
+		
+		//First fill the L,R limits for rows above the band and below the band
+		//Some of this may not be needed.
+		for(int a=0; a<p; a++) {
+			path_lims_LR[p][a][L] = -1; //Box it out, shouldn't ever be used.
+			path_lims_LR[p][a][R] = 0;
+		}
+		for(int a=p+m+1; a<=2*m; a++) {
+			path_lims_LR[p][a][L] = n;   
+			path_lims_LR[p][a][R] = n+1; //Box it out, shouldn't ever be used.
+		}
+		
+		
+		int currLCS;
+		while(i >= mid && j >= 0) {
+			// Update the current table plateau height that we are trying to 
+			// find the edge of, since this is the start of a new plateau
+			currLCS = arr[i][j];
+			
+			// March Left throw rough looking for the table value to change
+			// Set the upper and lower bounds in the columns we pass through
+			while(j > 0 && arr[i][j-1] == currLCS) {
+				System.out.println("Move left @ x = " + j + " y = " + i);
+				//Update U,D,L,R
+				path_lims_UD[p][j][U] = i;   // Limit when coming from above is inclusive.
+				path_lims_UD[p][j][D] = i+1; // Limit when coming from below is non-inclusive
+				j--;
+			}
+
+			//
+			// Either a non-diagonal lower left corner of the path, or a diagonal. 
+			// - No special handler needed
+
+			// March up if not a diagonal
+			while(i > p && arr[i-1][j] == currLCS) {
+				System.out.println("Move up   @ x = " + j + " y = " + i);
+				//Update L,R,  and D already set, U comes at diagonal
+				path_lims_LR[p][i][L] = j;    // Limit when coming from left is inclusive.
+				path_lims_LR[p][i][R] = j+1;  // Limit when coming from right is non-inclusive 
+				i--;
+			}
+
+			//
+			// Diagonal (or [0,0] )
+			//
+
+			//Strings should match here!
+			System.out.println("Move diag @ x = " + j + " y = " + i);
+			//Strings should match here
+			if(i != p && j != 0) {
+				System.out.print(A[i-1]);
+				System.out.println(B[j-1]);
+			}
+			
+			//Update U,D,L,R, which must all equal this square, since it is a diagonal, thus inclusive
+			// to the upper problem and lower problem
+			path_lims_UD[p][j][U] = i;
+			path_lims_UD[p][j][D] = i;
+			path_lims_LR[p][i][L] = j;
+			path_lims_LR[p][i][R] = j;
+			//Move one left, and one up, since this is a diagonal
+			j--;
+			i--;
+		}
+	}
+	
+	
 	public static void main(String[] args) {
 		Scanner s = new Scanner(System.in);
 		int T = s.nextInt();
@@ -206,32 +346,28 @@ public class CLCSFast {
 			System.out.println("U");
 			for(int p = 0; p <= m; p++) {
 				for(int j = 0; j <= n; j++) {
-					System.out.print(path_lims_UD[p][j][U]);
-					System.out.print(" ");
+					System.out.print(String.format("% 3d ", path_lims_UD[p][j][U]));
 				}
 				System.out.println();
 			}
 			System.out.println("D");
 			for(int p = 0; p <= m; p++) {
 				for(int j = 0; j <= n; j++) {
-					System.out.print(path_lims_UD[p][j][D]);
-					System.out.print(" ");
+					System.out.print(String.format("% 3d ", path_lims_UD[p][j][D]));
 				}
 				System.out.println();
 			}
 			System.out.println("L");
 			for(int p = 0; p <= m; p++) {
 				for(int j = 0; j <= 2*m; j++) {
-					System.out.print(path_lims_LR[p][j][L]);
-					System.out.print(" ");
+					System.out.print(String.format("% 3d ", path_lims_LR[p][j][L]));
 				}
 				System.out.println();
 			}
 			System.out.println("R");
 			for(int p = 0; p <= m; p++) {
 				for(int j = 0; j <= 2*m; j++) {
-					System.out.print(path_lims_LR[p][j][R]);
-					System.out.print(" ");
+					System.out.print(String.format("% 3d ", path_lims_LR[p][j][R]));
 				}
 				System.out.println();
 			}
