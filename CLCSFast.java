@@ -283,7 +283,8 @@ public class CLCSFast {
 		}
 		
 		//Rewind to the bottom right corner.
-		i--;
+		// - Bottom edge is limited by either mid + m, or the lower boundary bottom right corner.
+		i = (path_lims_UD[lower][n][U] < mid + m)  ?  path_lims_UD[lower][n][U]  :  mid + m;
 		j--;
 		
 		// Debug: Print the LCS length.
@@ -354,7 +355,7 @@ public class CLCSFast {
 			}
 			if(DEBUG_CHECK_DIAGONAL_STRING_MATCH) {
 				if(i != 0 && j != 0) {
-					if(A[i-1] != B[j-1])
+					if(Aext[i-1] != B[j-1])
 						throw(new Exception("Diagonal string mismatch!"));
 				}
 			}
