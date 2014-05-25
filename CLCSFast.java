@@ -51,7 +51,6 @@ public class CLCSFast {
 		int i, j;
 		final int p = 0;
 		
-		
 		for (i = 0; i <= m; i++)
 			arr[i][0] = 0;
 		for (j = 0; j <= n; j++)
@@ -65,85 +64,64 @@ public class CLCSFast {
 			}
 		}
 
-		System.out.println(arr[m][n]);
-		
-		//TODO what if m or n equals 0??
+		// Print the number of matches.
+		System.out.println("Matches = " + arr[m][n]);
 
-
-		//Walk the path backwards from arr[m][n], and fill the limits accordingly
+		//
+		// Walk the path backwards from arr[m][n], and fill the limits accordingly
+		//
 		i = m; j = n;
 		int currLCS;
 		while(i >= 0 && j >= 0) {
+			// Update the current table plateau height that we are trying to 
+			// find the edge of, since this is the start of a new plateau
 			currLCS = arr[i][j];
 			
-//			//Set right limit of this new row, must include the beginning, since it is a diagonal,
-//			// (except for the  special case of [m,n] which is corrected later).
-//			path_lims_LR[p][i][R] = j;
-
 			// March Left throw rough looking for the table value to change
 			// Set the upper and lower bounds in the columns we pass through
 			while(j > 0 && arr[i][j-1] == currLCS) {
+				System.out.println("Move left @ x = " + j + " y = " + i);
 				//Update U,D,L,R
-				System.out.println("Noncorn Move left @ x = " + j + " y = " + i);
 				path_lims_UD[p][j][U] = i;   // Limit when coming from above is inclusive.
 				path_lims_UD[p][j][D] = i+1; // Limit when coming from below is non-inclusive
 				j--;
 			}
 
 			//
-			// Possibly a corner 
-			//
+			// Either a non-diagonal lower left corner of the path, or a diagonal. 
+			// - No special handler needed
 
-			//No U,D,L,R updates at lower left corner - limits will be the diagonals in this row and column!
-			
-//			//For this column, which may include the diagonal, set the limit when coming from the bottom, which must be inclusive of this row
-//			path_lims_UD[p][j][D] = i;    // Limit when coming from below is inclusive
-
-			//If this is a non-diagonallower left corner block, must do special case if moving upward to not mess up right-limit of this row
-//			if(i > 0 && arr[i-1][j] == currLCS){
-//				//L,R,D for this cell already done, U comes at the diagonal
-//				System.out.println("Corner  Move up @ x = " + j + " y = " + i );
-//				i--;
-//			}
-		
 			// March up if not a diagonal
 			while(i > 0 && arr[i-1][j] == currLCS) {
+				System.out.println("Move up   @ x = " + j + " y = " + i);
 				//Update L,R,  and D already set, U comes at diagonal
-				System.out.println("NonCorn Move up   @ x = " + j + " y = " + i);
 				path_lims_LR[p][i][L] = j;    // Limit when coming from left is inclusive.
 				path_lims_LR[p][i][R] = j+1;  // Limit when coming from right is non-inclusive 
 				i--;
 			}
-//			//At this point sitting at a diagonal
-//			//Update U, D already set, L will be update in the future, R at the beggining of next big loop
-//			path_lims_UD[p][j][U] = i;  // Limit of this column must include diagonal for both directions.
+
+			//
+			// Diagonal (or [0,0] )
+			//
+
+			//Strings should match here!
+			System.out.println("Move diag @ x = " + j + " y = " + i);
+			//Strings should match here
+			if(i != 0 && j != 0) {
+				System.out.print(A[i-1]);
+				System.out.println(B[j-1]);
+			}
+			
 			//Update U,D,L,R, which must all equal this square, since it is a diagonal, thus inclusive
 			// to the upper problem and lower problem
 			path_lims_UD[p][j][U] = i;
 			path_lims_UD[p][j][D] = i;
 			path_lims_LR[p][i][L] = j;
 			path_lims_LR[p][i][R] = j;
-			
-
-			
-			
-			System.out.println("Diagonal Move left @ x = " + j + " y = " + i);
-			
-			
-			//0,0 might be a weird special case
-			if(i != 0 && j != 0) {
-				System.out.print(A[i-1]);
-				System.out.println(B[j-1]);
-			}
-			
-			//Move one left, and one up!
+			//Move one left, and one up, since this is a diagonal
 			j--;
 			i--;
 		}
-
-		
-		
-		//TODO: Fill path lengths
 		
 		return arr[m][n];
 	}
@@ -200,7 +178,6 @@ public class CLCSFast {
 				}
 				System.out.println();
 			}
-			
 			
 		}
 	}
