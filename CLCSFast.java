@@ -4,14 +4,18 @@ public class CLCSFast {
 	static int[][] arr = new int[2048][2048];
 	static char[] A, B;
 	
-	//Path is stored as the implied table limits for subproblems above and below.
-	//Limits are inclusive.
-	//Array dimensions are [path][row or column][limit direction]
-	//For instance, to see the lowest element below the path p in column c,
-	// look up path_lims_UD[p][c][U], and that is the upper limit of the search (numerically
-	// smallest index, since using inverted y coordinates, ascending downwards).
-	// To find the right most element to include in the table underneith path p in
-	// row r, look up path_lims_LR[p][r][R].  This is numerically largest index in this row.
+	// Path is stored as the implied table limits for subproblems above and below.
+	// Limits are inclusive.
+	// Array dimensions are [path][row or column][limit direction]
+	//
+	// For instance, to see the lowest element to include in column c in the
+	// subproblem table above path p, look up path_lims_UD[p][c][U],
+	// which is the largest index, since using inverted y coordinates,
+	// ascending downwards).
+	//
+	// To find the right most element to include in the table underneith and left
+	// of path p in/ row r, look up path_lims_LR[p][r][L].  This is numerically
+	// largest index in this row.
 	static int U = 0;
 	static int D = 1;
 	static int L = 0;
@@ -19,34 +23,76 @@ public class CLCSFast {
 	static int[][][] path_lims_UD = new int[2*2048][2048][2]; // Cache efficient for filling
 	static int[][][] path_lims_LR = new int[2*2048][2048][2]; // Cache efficient for filling
 
-/*	static int CLCS() {
+	static int CLCS() {
 		int m = A.length;
 		int n = B.length;
 		
+		int LCS_lengths[] = new int[m+1];
 		
+		char[] Aext = new char[2*m];
 		
-		//Try each LCS(cut(A,k),cut(B,0))
-		for(int k = 0; k < m; k++) {
-			// Cut A
-			int Atemp_ind = 0;
-			for(int i = k; i < m; i++)
-				Atemp[Atemp_ind++] = A[i];
-			for(int i = 0; i < k; i++)
-				Atemp[Atemp_ind++] = A[i];
-			
-			//Calculate LCS for this cut of A
-			int thislen = LCS(Atemp,B);
-
-			//Update the maximum LCS length, if we found a new max.
-			if(thislen> maxlen)
-				maxlen = thislen;
+		// Make a 2x repeat of A, call it Aext (A extended)
+		{
+		int j = 0;
+		for(int t=0; t<2; t++)
+			for(int i=0; i<m; i++)
+				Aext[j++] = A[i];
 		}
+		
+		// Initialize the path lengths to -1 for debugging, etc
+		for(int i=0; i<=m; i++)
+			LCS_lengths[i] = -1;
+		
+		//
+		// Initial boundaries
+		// - Do an LCS search for upper/right bound
+		// - then copy these m rows down for bottom/left bound
+		
+		// Path 0
+		LCS_lengths[0] = First_LCS_PathFill(A,B);
+		// Fill in missing table values for rows in the extend part of the table t
+		for(int i=m+1; i<=2*m; i++) {
+			path_lims_LR[0][i][R] = n+1; // Box out 
+			path_lims_LR[0][i][L] = n; // Should never be used 
+		}
+
+		// Path m
+		// Copy the U,D bounds to path m
+		for(int i = 0; i<=n; i++) {
+			path_lims_UD[m][i][U] = path_lims_UD[0][i][U] + m; 
+			path_lims_UD[m][i][D] = path_lims_UD[0][i][D] + m; // Should never be used.
+		}
+		// Copy L,R values to path m, and also fill in any missing entries due extending table in A direction
+		for(int i=0; i<m; i++) {
+			path_lims_LR[m][i][R] = 0; 
+			path_lims_LR[m][i][L] = -1; // Box out - Should never be used 
+		}
+		for(int i=m; i<=2*m; i++) {
+			path_lims_LR[m][i][R] = path_lims_LR[0][i-m][R]; 
+			path_lims_LR[m][i][L] = path_lims_LR[0][i-m][L]; // Should never be used
+		}
+
+		
+		// Do recursive calls here:
+		// TODO
+		// TODO
+		// TODO
+		// TODO
+		
+	
+		
+		
+		// Determine the longest of the LCSs to return.
+		int maxlen=-1;
+		for(int i=0; i<m; i++)
+			if(	LCS_lengths[i] > maxlen)
+				maxlen = LCS_lengths[i];
 		
 		return maxlen;
 	}
-*/
 
-	static int LCS_PathFill(final char[] A, final char[] B) {
+
+	static int First_LCS_PathFill(final char[] A, final char[] B) {
 		int m = A.length, n = B.length;
 		int i, j;
 		final int p = 0;
@@ -133,47 +179,58 @@ public class CLCSFast {
 			A = s.next().toCharArray();
 			B = s.next().toCharArray();
 			
-			for(int i = 0; i < 6; i++) {
-				for(int j = 0; j < 6; j++) {
-					path_lims_UD[i][j][0] = -1;
-					path_lims_UD[i][j][1] = -1;
-					path_lims_LR[i][j][0] = -1;
-					path_lims_LR[i][j][1] = -1;
+			//
+			// Fill the relevent parts of the limits arrays with a debug sentinel.
+			//
+			int m1 = A.length;
+			int n1 = B.length;
+			for(int p = 0; p <= m1; p++) {
+				for(int j = 0; j <= ((2*m1 > n1) ? 2*m1: n1) ; j++) {
+					path_lims_UD[p][j][0] = -2;
+					path_lims_UD[p][j][1] = -2;
+					path_lims_LR[p][j][0] = -2;
+					path_lims_LR[p][j][1] = -2;
 				}
 			}
 					
-			
-			LCS_PathFill(A,B);
-			//System.out.println(CLCS());
+			//
+			// Call the algorithm
+			//
+			System.out.println(CLCS());
 
+			//
+			// Print the limits arrays for debugging purposes.
+			//
+			int m = A.length;
+			int n = B.length;
 			System.out.println("U");
-			for(int i = 0; i < 6; i++) {
-				for(int j = 0; j < 6; j++) {
-					System.out.print(path_lims_UD[i][j][U]);
+			for(int p = 0; p <= m; p++) {
+				for(int j = 0; j <= n; j++) {
+					System.out.print(path_lims_UD[p][j][U]);
 					System.out.print(" ");
 				}
 				System.out.println();
 			}
 			System.out.println("D");
-			for(int i = 0; i < 6; i++) {
-				for(int j = 0; j < 6; j++) {
-					System.out.print(path_lims_UD[i][j][D]);
+			for(int p = 0; p <= m; p++) {
+				for(int j = 0; j <= n; j++) {
+					System.out.print(path_lims_UD[p][j][D]);
 					System.out.print(" ");
 				}
 				System.out.println();
 			}
 			System.out.println("L");
-			for(int i = 0; i < 6; i++) {
-				for(int j = 0; j < 6; j++) {
-					System.out.print(path_lims_LR[i][j][L]);
+			for(int p = 0; p <= m; p++) {
+				for(int j = 0; j <= 2*m; j++) {
+					System.out.print(path_lims_LR[p][j][L]);
 					System.out.print(" ");
 				}
 				System.out.println();
 			}
 			System.out.println("R");
-			for(int i = 0; i < 6; i++) {
-				for(int j = 0; j < 6; j++) {
-					System.out.print(path_lims_LR[i][j][R]);
+			for(int p = 0; p <= m; p++) {
+				for(int j = 0; j <= 2*m; j++) {
+					System.out.print(path_lims_LR[p][j][R]);
 					System.out.print(" ");
 				}
 				System.out.println();
