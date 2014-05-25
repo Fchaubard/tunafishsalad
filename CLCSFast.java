@@ -9,10 +9,10 @@ public class CLCSFast {
 	// so you can see which values got filled by printing afterwards.
 	static final boolean DEBUG_SENTINELS = true;
 	// Print arr after doing a subproblem.
-	static final boolean DEBUG_PRINT_ARR_AFTERWARDS = false;
+	static final boolean DEBUG_PRINT_ARR_AFTERWARDS = true;
 	// Some of the U,D,L,R limits will never be used if everything
 	// is working correctly.
-	static final boolean DEBUG_EXTRA_LIMITS = false;
+	static final boolean DEBUG_EXTRA_LIMITS = true;
 	// When reverse-traversing the path after calculating the table,
 	// print out messages explaining the path.
 	static final boolean DEBUG_PRINT_PATH_RECOVERY_STORY = false;
@@ -20,9 +20,9 @@ public class CLCSFast {
 	// characters in the string match where we think they do!
 	static final boolean DEBUG_CHECK_DIAGONAL_STRING_MATCH = true;
 	// Print the LCS, defined by the bottom right table entry.
-	static final boolean DEBUG_PRINT_LCS_EARLY = true;
+	static final boolean DEBUG_PRINT_LCS_EARLY = false;
 	// Print the limits U,D,L,R after everything is done.
-	static final boolean DEBUG_PRINT_LIMITS = true;
+	static final boolean DEBUG_PRINT_LIMITS = false;
 
 
 	
@@ -50,11 +50,14 @@ public class CLCSFast {
 	static int[][][] path_lims_UD = new int[2048 + 1][2048][2]; // Cache efficient for filling
 	static int[][][] path_lims_LR = new int[2048 + 1][2048][2]; // Cache efficient for filling
 
+	//Result array
+	static int LCS_lengths[];
+	
 	static int CLCS() throws Exception {
 		m = A.length;
 		n = B.length;
 		
-		int LCS_lengths[] = new int[m+1];
+		LCS_lengths = new int[m+1];
 		
 		// Make a 2x repeat of string A, call it Aext (A extended)
 		{
@@ -212,11 +215,18 @@ public class CLCSFast {
 	}
 	
 	static void FindShortestPaths(int upper, int lower) throws Exception {
-		//TODO: Base Case
+		// If there no more paths between upper and lower, we re done.
+		if(lower - upper <= 1)
+			return;
 		
-		SingleShortestPaths((upper+lower)/2, upper, lower);
-		
-		//TODO: Recursive Calls
+		int mid = (upper+lower)/2;
+
+		//Split the problem by finding a path in the middle.
+		LCS_lengths[mid] = SingleShortestPaths(mid, upper, lower);
+
+		//Recursive calls subproblem bellow and above mid path.
+		FindShortestPaths(upper,mid);
+		FindShortestPaths(mid,lower);
 	}
 	
 	static void debugPrintArr() {
@@ -228,7 +238,8 @@ public class CLCSFast {
 		}
 	}
 	
-	static void SingleShortestPaths(int mid, int upper, int lower) throws Exception {
+	// Returns the LCS of this path, and fills in the table limits implied by this path.
+	static int SingleShortestPaths(int mid, int upper, int lower) throws Exception {
 		int i, j;
 		final int p = mid;
 		
@@ -287,9 +298,11 @@ public class CLCSFast {
 		i = (path_lims_UD[lower][n][U] < mid + m)  ?  path_lims_UD[lower][n][U]  :  mid + m;
 		j--;
 		
+		int LCS = arr[i][j];
+		
 		// Debug: Print the LCS length.
 		if(DEBUG_PRINT_LCS_EARLY) {
-			System.out.println("Path p = " + p + ", LCS = " + arr[i][j]);
+			System.out.println("Path p = " + p + ", LCS = " + LCS);
 		}
 
 		//
@@ -370,6 +383,8 @@ public class CLCSFast {
 			j--;
 			i--;
 		}
+		
+		return LCS;
 	}
 	
 	
