@@ -1,6 +1,31 @@
 import java.util.*;
 
 public class CLCSFast {
+	//
+	// Setting these to false should compile out unwanted code.
+	//
+	
+	// Sentinel values for important arrays, negative value fills,
+	// so you can see which values got filled by printing afterwards.
+	static final boolean DEBUG_SENTINELS = true;
+	// Print arr after doing a subproblem.
+	static final boolean DEBUG_PRINT_ARR_AFTERWARDS = false;
+	// Some of the U,D,L,R limits will never be used if everything
+	// is working correctly.
+	static final boolean DEBUG_EXTRA_LIMITS = false;
+	// When reverse-traversing the path after calculating the table,
+	// print out messages explaining the path.
+	static final boolean DEBUG_PRINT_PATH_RECOVERY_STORY = false;
+	// When reverse-traversing the path, make sure that the
+	// characters in the string match where we think they do!
+	static final boolean DEBUG_CHECK_DIAGONAL_STRING_MATCH = true;
+	// Print the LCS, defined by the bottom right table entry.
+	static final boolean DEBUG_PRINT_LCS_EARLY = true;
+	// Print the limits U,D,L,R after everything is done.
+	static final boolean DEBUG_PRINT_LIMITS = true;
+
+
+	
 	static int[][] arr = new int[2*2048][2048];
 	static char[] A, B; //String A and B
 	static char[] Aext = new char[2*2048]; //2x repetition of string A ("A extended").
@@ -25,13 +50,13 @@ public class CLCSFast {
 	static int[][][] path_lims_UD = new int[2048 + 1][2048][2]; // Cache efficient for filling
 	static int[][][] path_lims_LR = new int[2048 + 1][2048][2]; // Cache efficient for filling
 
-	static int CLCS() {
+	static int CLCS() throws Exception {
 		m = A.length;
 		n = B.length;
 		
 		int LCS_lengths[] = new int[m+1];
 		
-		// Make a 2x repeat of A, call it Aext (A extended)
+		// Make a 2x repeat of string A, call it Aext (A extended)
 		{
 		int j = 0;
 		for(int t=0; t<2; t++)
@@ -40,8 +65,10 @@ public class CLCSFast {
 		}
 		
 		// Initialize the path lengths to -1 for debugging, etc
-		for(int i=0; i<=m; i++)
-			LCS_lengths[i] = -1;
+		if(DEBUG_SENTINELS) {
+			for(int i=0; i<=m; i++)
+				LCS_lengths[i] = -1;
+		}
 		
 		//
 		// Initial boundaries
@@ -60,16 +87,19 @@ public class CLCSFast {
 		// Copy the U,D bounds to path m
 		for(int i = 0; i<=n; i++) {
 			path_lims_UD[m][i][U] = path_lims_UD[0][i][U] + m; 
-			path_lims_UD[m][i][D] = path_lims_UD[0][i][D] + m; // Should never be used.
+			if(DEBUG_EXTRA_LIMITS)
+				path_lims_UD[m][i][D] = path_lims_UD[0][i][D] + m; // Should never be used.
 		}
 		// Copy L,R values to path m, and also fill in any missing entries due extending table in A direction
 		for(int i=0; i<m; i++) {
-			path_lims_LR[m][i][R] = 0; 
-			path_lims_LR[m][i][L] = -1; // Box out - Should never be used 
+			path_lims_LR[m][i][R] = 0;
+			if(DEBUG_EXTRA_LIMITS)
+				path_lims_LR[m][i][L] = -1; // Box out - Should never be used 
 		}
 		for(int i=m; i<=2*m; i++) {
 			path_lims_LR[m][i][R] = path_lims_LR[0][i-m][R]; 
-			path_lims_LR[m][i][L] = path_lims_LR[0][i-m][L]; // Should never be used
+			if(DEBUG_EXTRA_LIMITS)
+				path_lims_LR[m][i][L] = path_lims_LR[0][i-m][L]; // Should never be used
 		}
 
 
@@ -89,7 +119,7 @@ public class CLCSFast {
 	}
 
 
-	static int First_LCS_PathFill(final char[] A, final char[] B) {
+	static int First_LCS_PathFill(final char[] A, final char[] B) throws Exception {
 		//int m = A.length, n = B.length;
 		int i, j;
 		final int p = 0;
@@ -107,8 +137,10 @@ public class CLCSFast {
 			}
 		}
 
-		// Print the number of matches.
-		System.out.println("Matches = " + arr[m][n]);
+		// Debug: Print the LCS length.
+		if(DEBUG_PRINT_LCS_EARLY) {
+			System.out.println("Path p = " + p + ", LCS = " + arr[m][n]);
+		}
 
 		//
 		// Walk the path backwards from arr[m][n], and fill the limits accordingly
@@ -123,7 +155,8 @@ public class CLCSFast {
 			// March Left throw rough looking for the table value to change
 			// Set the upper and lower bounds in the columns we pass through
 			while(j > 0 && arr[i][j-1] == currLCS) {
-				System.out.println("Move left @ x = " + j + " y = " + i);
+				if(DEBUG_PRINT_PATH_RECOVERY_STORY)
+					System.out.println("Move left @ x = " + j + " y = " + i);
 				//Update U,D,L,R
 				path_lims_UD[p][j][U] = i;   // Limit when coming from above is inclusive.
 				path_lims_UD[p][j][D] = i+1; // Limit when coming from below is non-inclusive
@@ -136,7 +169,8 @@ public class CLCSFast {
 
 			// March up if not a diagonal
 			while(i > 0 && arr[i-1][j] == currLCS) {
-				System.out.println("Move up   @ x = " + j + " y = " + i);
+				if(DEBUG_PRINT_PATH_RECOVERY_STORY)
+					System.out.println("Move up   @ x = " + j + " y = " + i);
 				//Update L,R,  and D already set, U comes at diagonal
 				path_lims_LR[p][i][L] = j;    // Limit when coming from left is inclusive.
 				path_lims_LR[p][i][R] = j+1;  // Limit when coming from right is non-inclusive 
@@ -148,11 +182,19 @@ public class CLCSFast {
 			//
 
 			//Strings should match here!
-			System.out.println("Move diag @ x = " + j + " y = " + i);
-			//Strings should match here
-			if(i != 0 && j != 0) {
-				System.out.print(A[i-1]);
-				System.out.println(B[j-1]);
+			if(DEBUG_PRINT_PATH_RECOVERY_STORY) {
+				System.out.println("Move diag @ x = " + j + " y = " + i);
+				//Strings should match here
+				if(i != 0 && j != 0) {
+					System.out.print(A[i-1]);
+					System.out.println(B[j-1]);
+				}
+			}
+			if(DEBUG_CHECK_DIAGONAL_STRING_MATCH) {
+				if(i != 0 && j != 0) {
+					if(A[i-1] != B[j-1])
+						throw(new Exception("Diagonal string mismatch!"));
+				}
 			}
 			
 			//Update U,D,L,R, which must all equal this square, since it is a diagonal, thus inclusive
@@ -169,7 +211,7 @@ public class CLCSFast {
 		return arr[m][n];
 	}
 	
-	static void FindShortestPaths(int upper, int lower) {
+	static void FindShortestPaths(int upper, int lower) throws Exception {
 		//TODO: Base Case
 		
 		SingleShortestPaths((upper+lower)/2, upper, lower);
@@ -177,44 +219,43 @@ public class CLCSFast {
 		//TODO: Recursive Calls
 	}
 	
-	static void printArr() {
+	static void debugPrintArr() {
 		for(int j = 0; j<=2*m; j++) {
 			for(int i=0; i<=n; i++) {
-				System.out.print(arr[j][i]);
-				System.out.print(" ");
+				System.out.print(String.format("% 3d ",arr[j][i]));
 			}
 			System.out.println();
 		}
 	}
 	
-	static void SingleShortestPaths(int mid, int upper, int lower) {
+	static void SingleShortestPaths(int mid, int upper, int lower) throws Exception {
 		int i, j;
 		final int p = mid;
 		
-		// FIXME
-		// FIXME DEBUG USE ONLY
-		// FIXME
-		for(i=0; i<=2*m; i++)
-			for(j=0; j<=n; j++)
-				arr[i][j] = -2;
+		// For debugging purposes, fill the whole table with -2 sentinel so you can
+		// see what got filled in this step.
+		if(DEBUG_SENTINELS) {
+			for(i=0; i<=2*m; i++)
+				for(j=0; j<=n; j++)
+					arr[i][j] = -2;
+		}
+		
 		
 		// Fill leftmost column in appropriate spots
-		//for (i = 0; i <= 2*m; i++)
-		//	arr[i][0] = 0;
 		for(i = mid; i <= path_lims_UD[lower][0][U]; i++)
 			arr[i][0] = 0;
 		// Fill uppermost row in appropriate spots
-		//for (j = 0; j <= n; j++)
-		//	arr[0][j] = 0;
 		j = 0;
-		while(j <= path_lims_LR[upper][mid][L])
-			arr[mid][j++] = 0;
-		
-		//FIXME: Debug Use
-		System.out.println(mid);
-		printArr();
-		
-		i=i; //FIXME: Debug breakpoint spot
+		while(j <= path_lims_LR[upper][mid][L]) {
+			arr[mid][j] = 0;
+			j++;
+		}
+		// Put zeros above every remaining column, so that the table iterator works as intended
+		// on the top boundary. This is a good low-cost workaround.
+		while(j <= n) {
+			arr[(path_lims_UD[upper][j][D]-1)][j] = 0;
+			j++;
+		}
 		
 		//Traverse an m-wide band, starting at mid+1  (the zeroes row above it already full)
 		for (i = mid + 1; i <= mid + m; i++) {
@@ -224,6 +265,10 @@ public class CLCSFast {
 			//...path ends at right-limit of row, which is fully defined by upper bounding path.
 			int right_limit = path_lims_LR[upper][i][L];
 			
+			//Stick a zero in the first slot to the left of the range, such that the code
+			// below works correctly on the left element when the left element is outside
+			// of the range. This is a very efficient method to handle this.
+			arr[i][left_limit - 1] = 0;
 			for (j = left_limit; j <= right_limit; j++) {
 				arr[i][j] = Math.max(arr[i - 1][j], arr[i][j - 1]);
 				if (Aext[i - 1] == B[j - 1])
@@ -231,16 +276,20 @@ public class CLCSFast {
 			}
 		}
 
-		//FIXME: Debug Use
-		System.out.println(mid);
-		printArr();
+		// Debug: Print the whole table
+		if(DEBUG_PRINT_ARR_AFTERWARDS) {
+			System.out.println(mid);
+			debugPrintArr();
+		}
 		
 		//Rewind to the bottom right corner.
 		i--;
 		j--;
 		
-		// Print the number of matches.
-		System.out.println("Matches = " + arr[i][j]);
+		// Debug: Print the LCS length.
+		if(DEBUG_PRINT_LCS_EARLY) {
+			System.out.println("Path p = " + p + ", LCS = " + arr[i][j]);
+		}
 
 		//
 		// Walk the path backwards from arr[i][j], and fill the limits accordingly
@@ -249,12 +298,14 @@ public class CLCSFast {
 		//First fill the L,R limits for rows above the band and below the band
 		//Some of this may not be needed.
 		for(int a=0; a<p; a++) {
-			path_lims_LR[p][a][L] = -1; //Box it out, shouldn't ever be used.
+			if(DEBUG_EXTRA_LIMITS)
+				path_lims_LR[p][a][L] = -1; //Box it out, shouldn't ever be used.
 			path_lims_LR[p][a][R] = 0;
 		}
 		for(int a=p+m+1; a<=2*m; a++) {
 			path_lims_LR[p][a][L] = n;   
-			path_lims_LR[p][a][R] = n+1; //Box it out, shouldn't ever be used.
+			if(DEBUG_EXTRA_LIMITS)
+				path_lims_LR[p][a][R] = n+1; //Box it out, shouldn't ever be used.
 		}
 		
 		
@@ -267,7 +318,8 @@ public class CLCSFast {
 			// March Left throw rough looking for the table value to change
 			// Set the upper and lower bounds in the columns we pass through
 			while(j > 0 && arr[i][j-1] == currLCS) {
-				System.out.println("Move left @ x = " + j + " y = " + i);
+				if(DEBUG_PRINT_PATH_RECOVERY_STORY)
+					System.out.println("Move left @ x = " + j + " y = " + i);
 				//Update U,D,L,R
 				path_lims_UD[p][j][U] = i;   // Limit when coming from above is inclusive.
 				path_lims_UD[p][j][D] = i+1; // Limit when coming from below is non-inclusive
@@ -280,7 +332,8 @@ public class CLCSFast {
 
 			// March up if not a diagonal
 			while(i > p && arr[i-1][j] == currLCS) {
-				System.out.println("Move up   @ x = " + j + " y = " + i);
+				if(DEBUG_PRINT_PATH_RECOVERY_STORY)
+					System.out.println("Move up   @ x = " + j + " y = " + i);
 				//Update L,R,  and D already set, U comes at diagonal
 				path_lims_LR[p][i][L] = j;    // Limit when coming from left is inclusive.
 				path_lims_LR[p][i][R] = j+1;  // Limit when coming from right is non-inclusive 
@@ -290,15 +343,22 @@ public class CLCSFast {
 			//
 			// Diagonal (or [0,0] )
 			//
-
 			//Strings should match here!
-			System.out.println("Move diag @ x = " + j + " y = " + i);
-			//Strings should match here
-			if(i != p && j != 0) {
-				System.out.print(A[i-1]);
-				System.out.println(B[j-1]);
+			if(DEBUG_PRINT_PATH_RECOVERY_STORY) {
+				System.out.println("Move diag @ x = " + j + " y = " + i);
+				//Strings should match here
+				if(i != p && j != 0) {
+					System.out.print(A[i-1]);
+					System.out.println(B[j-1]);
+				}
 			}
-			
+			if(DEBUG_CHECK_DIAGONAL_STRING_MATCH) {
+				if(i != 0 && j != 0) {
+					if(A[i-1] != B[j-1])
+						throw(new Exception("Diagonal string mismatch!"));
+				}
+			}
+
 			//Update U,D,L,R, which must all equal this square, since it is a diagonal, thus inclusive
 			// to the upper problem and lower problem
 			path_lims_UD[p][j][U] = i;
@@ -312,7 +372,7 @@ public class CLCSFast {
 	}
 	
 	
-	public static void main(String[] args) {
+	public static void main(String[] args) throws Exception {
 		Scanner s = new Scanner(System.in);
 		int T = s.nextInt();
 		for (int tc = 0; tc < T; tc++) {
@@ -320,19 +380,22 @@ public class CLCSFast {
 			B = s.next().toCharArray();
 			
 			//
-			// Fill the relevent parts of the limits arrays with a debug sentinel.
+			// Fill the relevant parts of the limits arrays with a debug sentinel.
 			//
-			int m1 = A.length;
-			int n1 = B.length;
-			for(int p = 0; p <= m1; p++) {
-				for(int j = 0; j <= ((2*m1 > n1) ? 2*m1: n1) ; j++) {
-					path_lims_UD[p][j][0] = -2;
-					path_lims_UD[p][j][1] = -2;
-					path_lims_LR[p][j][0] = -2;
-					path_lims_LR[p][j][1] = -2;
+			if(DEBUG_SENTINELS) {
+				int m1 = A.length;
+				int n1 = B.length;
+				for(int p = 0; p <= m1; p++) {
+					for(int j = 0; j <= ((2*m1 > n1) ? 2*m1: n1) ; j++) {
+						path_lims_UD[p][j][0] = -2;
+						path_lims_UD[p][j][1] = -2;
+						path_lims_LR[p][j][0] = -2;
+						path_lims_LR[p][j][1] = -2;
+					}
 				}
 			}
-					
+			
+			
 			//
 			// Call the algorithm
 			//
@@ -341,37 +404,38 @@ public class CLCSFast {
 			//
 			// Print the limits arrays for debugging purposes.
 			//
-			int m = A.length;
-			int n = B.length;
-			System.out.println("U");
-			for(int p = 0; p <= m; p++) {
-				for(int j = 0; j <= n; j++) {
-					System.out.print(String.format("% 3d ", path_lims_UD[p][j][U]));
+			if(DEBUG_PRINT_LIMITS) {
+				int m = A.length;
+				int n = B.length;
+				System.out.println("U");
+				for(int p = 0; p <= m; p++) {
+					for(int j = 0; j <= n; j++) {
+						System.out.print(String.format("% 3d ", path_lims_UD[p][j][U]));
+					}
+					System.out.println();
 				}
-				System.out.println();
-			}
-			System.out.println("D");
-			for(int p = 0; p <= m; p++) {
-				for(int j = 0; j <= n; j++) {
-					System.out.print(String.format("% 3d ", path_lims_UD[p][j][D]));
+				System.out.println("D");
+				for(int p = 0; p <= m; p++) {
+					for(int j = 0; j <= n; j++) {
+						System.out.print(String.format("% 3d ", path_lims_UD[p][j][D]));
+					}
+					System.out.println();
 				}
-				System.out.println();
-			}
-			System.out.println("L");
-			for(int p = 0; p <= m; p++) {
-				for(int j = 0; j <= 2*m; j++) {
-					System.out.print(String.format("% 3d ", path_lims_LR[p][j][L]));
+				System.out.println("L");
+				for(int p = 0; p <= m; p++) {
+					for(int j = 0; j <= 2*m; j++) {
+						System.out.print(String.format("% 3d ", path_lims_LR[p][j][L]));
+					}
+					System.out.println();
 				}
-				System.out.println();
-			}
-			System.out.println("R");
-			for(int p = 0; p <= m; p++) {
-				for(int j = 0; j <= 2*m; j++) {
-					System.out.print(String.format("% 3d ", path_lims_LR[p][j][R]));
+				System.out.println("R");
+				for(int p = 0; p <= m; p++) {
+					for(int j = 0; j <= 2*m; j++) {
+						System.out.print(String.format("% 3d ", path_lims_LR[p][j][R]));
+					}
+					System.out.println();
 				}
-				System.out.println();
-			}
-			
+			} //DEBUG_PRINT_LIMITS
 		}
 	}
 }
