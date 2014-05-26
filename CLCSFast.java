@@ -7,12 +7,12 @@ public class CLCSFast {
 	
 	// Sentinel values for important arrays, negative value fills,
 	// so you can see which values got filled by printing afterwards.
-	static final boolean DEBUG_SENTINELS = true;
+	static final boolean DEBUG_SENTINELS = false;
 	// Print arr after doing a subproblem.
-	static final boolean DEBUG_PRINT_ARR_AFTERWARDS = true;
+	static final boolean DEBUG_PRINT_ARR_AFTERWARDS = false;
 	// Some of the U,D,L,R limits will never be used if everything
 	// is working correctly.
-	static final boolean DEBUG_EXTRA_LIMITS = true;
+	static final boolean DEBUG_EXTRA_LIMITS = false;
 	// When reverse-traversing the path after calculating the table,
 	// print out messages explaining the path.
 	static final boolean DEBUG_PRINT_PATH_RECOVERY_STORY = false;
@@ -47,8 +47,8 @@ public class CLCSFast {
 	static int D = 1;
 	static int L = 0;
 	static int R = 1; // right limit
-	static int[][][] path_lims_UD = new int[2048 + 1][2048][2]; // Cache efficient for filling
-	static int[][][] path_lims_LR = new int[2048 + 1][2048][2]; // Cache efficient for filling
+	static int[][][] path_lims_UD = new int[2048 + 1][2*2048][2]; // Cache efficient for filling
+	static int[][][] path_lims_LR = new int[2048 + 1][2*2048][2]; // Cache efficient for filling
 
 	//Result array
 	static int LCS_lengths[];
@@ -105,6 +105,11 @@ public class CLCSFast {
 				path_lims_LR[m][i][L] = path_lims_LR[0][i-m][L]; // Should never be used
 		}
 
+//		//TODO
+//		//FIXME
+//		// this just for debugging.
+//		if(m==5)
+//			return 0;
 
 		//
 		// Do recursive calls here:
@@ -135,11 +140,17 @@ public class CLCSFast {
 		for (i = 1; i <= m; i++) {
 			for (j = 1; j <= n; j++) {
 				arr[i][j] = Math.max(arr[i - 1][j], arr[i][j - 1]);
-				if (A[i - 1] == B[j - 1])
+				if (Aext[i - 1] == B[j - 1])
 					arr[i][j] = Math.max(arr[i][j], arr[i - 1][j - 1] + 1);
 			}
 		}
 
+		// Debug: Print the whole table
+		if(DEBUG_PRINT_ARR_AFTERWARDS) {
+			System.out.println(p);
+			debugPrintArr();
+		}
+		
 		// Debug: Print the LCS length.
 		if(DEBUG_PRINT_LCS_EARLY) {
 			System.out.println("Path p = " + p + ", LCS = " + arr[m][n]);
@@ -154,6 +165,9 @@ public class CLCSFast {
 			// Update the current table plateau height that we are trying to 
 			// find the edge of, since this is the start of a new plateau
 			currLCS = arr[i][j];
+
+			//Set the L limit for this row.
+			path_lims_LR[p][i][L] = j;
 			
 			// March Left throw rough looking for the table value to change
 			// Set the upper and lower bounds in the columns we pass through
@@ -161,22 +175,67 @@ public class CLCSFast {
 				if(DEBUG_PRINT_PATH_RECOVERY_STORY)
 					System.out.println("Move left @ x = " + j + " y = " + i);
 				//Update U,D,L,R
-				path_lims_UD[p][j][U] = i;   // Limit when coming from above is inclusive.
-				path_lims_UD[p][j][D] = i+1; // Limit when coming from below is non-inclusive
+				path_lims_UD[p][j][U] = i; // Limit when coming from above is inclusive.
+				path_lims_UD[p][j][D] = i; // Limit when coming from below is inclusive.
 				j--;
 			}
 
 			//
-			// Either a non-diagonal lower left corner of the path, or a diagonal. 
-			// - No special handler needed
-
+			// Either a non-diagonal lower left corner of the path, or a diagonal, or (0,0).
+			//
+			
+			//If lower left corner (not a diagonal), finish of the row, start the column.
+			if(i > 0 && arr[i-1][j] == currLCS) {
+				if(DEBUG_PRINT_PATH_RECOVERY_STORY)
+					System.out.println("Move corn @ x = " + j + " y = " + i);
+				//Set R to finish off row, U for column ends here
+				path_lims_LR[p][i][R] = j; 
+				path_lims_UD[p][j][U] = i;
+				i--;
+			}
+			// Diagonal, or (0,0)
+			else if((i > 0 && arr[i-1][j] != currLCS)
+				    || (i == 0) )
+			{
+				//Strings should match here!
+				if(DEBUG_PRINT_PATH_RECOVERY_STORY) {
+					System.out.println("Move diag @ x = " + j + " y = " + i);
+					//Strings should match here
+					if(i!= 0 && j!=0) {
+						System.out.print(Aext[i-1]);
+						System.out.println(B[j-1]);
+					}
+				}
+				if(DEBUG_CHECK_DIAGONAL_STRING_MATCH) {
+					if(i!= 0 && j!=0)
+						if(Aext[i-1] != B[j-1])
+							throw(new Exception("Diagonal string mismatch!"));
+				}
+				
+				//Update U,D,R, but not L since that was set at the beginning of the row
+				// to the upper problem and lower problem
+				path_lims_UD[p][j][U] = i;
+				path_lims_UD[p][j][D] = i;
+				path_lims_LR[p][i][R] = j;
+				//Move one left, and one up, since this is a diagonal
+				j--;
+				i--;
+				
+				//Since just hit a diagonal or (0,0), loop iteration is done.
+				continue;
+			}
+			
+			//
+			// If we made it this far, need to move upward in a column
+			//
+			
 			// March up if not a diagonal
 			while(i > 0 && arr[i-1][j] == currLCS) {
 				if(DEBUG_PRINT_PATH_RECOVERY_STORY)
 					System.out.println("Move up   @ x = " + j + " y = " + i);
-				//Update L,R,  and D already set, U comes at diagonal
-				path_lims_LR[p][i][L] = j;    // Limit when coming from left is inclusive.
-				path_lims_LR[p][i][R] = j+1;  // Limit when coming from right is non-inclusive 
+				//Update L,R,  and U already set, D comes at diagonal
+				path_lims_LR[p][i][L] = j;
+				path_lims_LR[p][i][R] = j; 
 				i--;
 			}
 
@@ -189,20 +248,19 @@ public class CLCSFast {
 				System.out.println("Move diag @ x = " + j + " y = " + i);
 				//Strings should match here
 				if(i != 0 && j != 0) {
-					System.out.print(A[i-1]);
+					System.out.print(Aext[i-1]);
 					System.out.println(B[j-1]);
 				}
 			}
 			if(DEBUG_CHECK_DIAGONAL_STRING_MATCH) {
 				if(i != 0 && j != 0) {
-					if(A[i-1] != B[j-1])
+					if(Aext[i-1] != B[j-1])
 						throw(new Exception("Diagonal string mismatch!"));
 				}
 			}
 			
-			//Update U,D,L,R, which must all equal this square, since it is a diagonal, thus inclusive
+			// Update D,L,R, since top of column. U was set at bottom of column
 			// to the upper problem and lower problem
-			path_lims_UD[p][j][U] = i;
 			path_lims_UD[p][j][D] = i;
 			path_lims_LR[p][i][L] = j;
 			path_lims_LR[p][i][R] = j;
@@ -328,29 +386,77 @@ public class CLCSFast {
 			// Update the current table plateau height that we are trying to 
 			// find the edge of, since this is the start of a new plateau
 			currLCS = arr[i][j];
-			
+
+			//Set the L limit for this row.
+			path_lims_LR[p][i][L] = j;
+
 			// March Left throw rough looking for the table value to change
 			// Set the upper and lower bounds in the columns we pass through
 			while(j > 0 && arr[i][j-1] == currLCS) {
 				if(DEBUG_PRINT_PATH_RECOVERY_STORY)
 					System.out.println("Move left @ x = " + j + " y = " + i);
 				//Update U,D,L,R
-				path_lims_UD[p][j][U] = i;   // Limit when coming from above is inclusive.
-				path_lims_UD[p][j][D] = i+1; // Limit when coming from below is non-inclusive
+				path_lims_UD[p][j][U] = i; // Limit when coming from above is inclusive.
+				path_lims_UD[p][j][D] = i; // Limit when coming from below is inclusive.
 				j--;
 			}
 
 			//
-			// Either a non-diagonal lower left corner of the path, or a diagonal. 
-			// - No special handler needed
+			// Either a non-diagonal lower left corner of the path, or a diagonal, or (p,0) the upper left corner. 
+			//
+
+			//If lower left corner (not a diagonal), finish of the row, start the column.
+			if(i > p && arr[i-1][j] == currLCS) {
+				if(DEBUG_PRINT_PATH_RECOVERY_STORY)
+					System.out.println("Move corn @ x = " + j + " y = " + i);
+				//Set R to finish off row, U for column ends here
+				path_lims_LR[p][i][R] = j; 
+				path_lims_UD[p][j][U] = i;
+				i--;
+			}
+			// Diagonal, or (p,0)
+			else if((i > p && arr[i-1][j] != currLCS)
+				    || (i == p) )
+			{
+				//Strings should match here!
+				if(DEBUG_PRINT_PATH_RECOVERY_STORY) {
+					System.out.println("Move diag @ x = " + j + " y = " + i);
+					//Strings should match here
+					if(i!= p && j!=0) {
+						System.out.print(Aext[i-1]);
+						System.out.println(B[j-1]);
+					}
+				}
+				if(DEBUG_CHECK_DIAGONAL_STRING_MATCH) {
+					if(i!= p && j!=0)
+						if(Aext[i-1] != B[j-1])
+							throw(new Exception("Diagonal string mismatch!"));
+				}
+				
+				//Update U,D,R, but not L since that was set at the beginning of the row
+				// to the upper problem and lower problem
+				path_lims_UD[p][j][U] = i;
+				path_lims_UD[p][j][D] = i;
+				path_lims_LR[p][i][R] = j;
+				//Move one left, and one up, since this is a diagonal
+				j--;
+				i--;
+				
+				//Since just hit a diagonal or (0,0), loop iteration is done.
+				continue;
+			}
+
+			//
+			// If we made it this far, need to move upward in a column
+			//
 
 			// March up if not a diagonal
 			while(i > p && arr[i-1][j] == currLCS) {
 				if(DEBUG_PRINT_PATH_RECOVERY_STORY)
 					System.out.println("Move up   @ x = " + j + " y = " + i);
 				//Update L,R,  and D already set, U comes at diagonal
-				path_lims_LR[p][i][L] = j;    // Limit when coming from left is inclusive.
-				path_lims_LR[p][i][R] = j+1;  // Limit when coming from right is non-inclusive 
+				path_lims_LR[p][i][L] = j;
+				path_lims_LR[p][i][R] = j; 
 				i--;
 			}
 
@@ -362,7 +468,7 @@ public class CLCSFast {
 				System.out.println("Move diag @ x = " + j + " y = " + i);
 				//Strings should match here
 				if(i != p && j != 0) {
-					System.out.print(A[i-1]);
+					System.out.print(Aext[i-1]);
 					System.out.println(B[j-1]);
 				}
 			}
@@ -373,9 +479,8 @@ public class CLCSFast {
 				}
 			}
 
-			//Update U,D,L,R, which must all equal this square, since it is a diagonal, thus inclusive
+			//Update D,L,R, since top of column. U was set at bottom of column.
 			// to the upper problem and lower problem
-			path_lims_UD[p][j][U] = i;
 			path_lims_UD[p][j][D] = i;
 			path_lims_LR[p][i][L] = j;
 			path_lims_LR[p][i][R] = j;
