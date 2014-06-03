@@ -1,3 +1,13 @@
+// Judson Wilson
+// SUNetID: judsonw
+// SUID number: 05235708
+//
+// Francois Chaubard 
+// SUNetID: fchaubar
+// SUID number: 5848305
+//
+
+
 import java.util.*;
 
 public class CLCSFast {
@@ -47,8 +57,10 @@ public class CLCSFast {
 	static int D = 1;
 	static int L = 0;
 	static int R = 1; // right limit
-	static int[][][] path_lims_UD = new int[2048 + 1][2*2048][2]; // Cache efficient for filling
-	static int[][][] path_lims_LR = new int[2048 + 1][2*2048][2]; // Cache efficient for filling
+	static int[][] path_lims_U = new int[2048][2*2048];
+	static int[][] path_lims_D = new int[2048][2*2048];
+	static int[][] path_lims_L = new int[2048][2*2048];
+	static int[][] path_lims_R = new int[2048][2*2048];
 
 	//Result array
 	static int LCS_lengths[];
@@ -82,27 +94,27 @@ public class CLCSFast {
 		LCS_lengths[0] = First_LCS_PathFill(A,B);
 		// Fill in missing table values for rows in the extend part of the table t
 		for(int i=m+1; i<=2*m; i++) {
-			path_lims_LR[0][i][R] = n+1; // Box out 
-			path_lims_LR[0][i][L] = n; // Should never be used 
+			path_lims_R[0][i] = n+1; // Box out 
+			path_lims_L[0][i] = n; // Should never be used 
 		}
 
 		// Path m
 		// Copy the U,D bounds to path m
 		for(int i = 0; i<=n; i++) {
-			path_lims_UD[m][i][U] = path_lims_UD[0][i][U] + m; 
+			path_lims_U[m][i] = path_lims_U[0][i] + m; 
 			if(DEBUG_EXTRA_LIMITS)
-				path_lims_UD[m][i][D] = path_lims_UD[0][i][D] + m; // Should never be used.
+				path_lims_D[m][i] = path_lims_D[0][i] + m; // Should never be used.
 		}
 		// Copy L,R values to path m, and also fill in any missing entries due extending table in A direction
 		for(int i=0; i<m; i++) {
-			path_lims_LR[m][i][R] = 0;
+			path_lims_R[m][i] = 0;
 			if(DEBUG_EXTRA_LIMITS)
-				path_lims_LR[m][i][L] = -1; // Box out - Should never be used 
+				path_lims_L[m][i] = -1; // Box out - Should never be used 
 		}
 		for(int i=m; i<=2*m; i++) {
-			path_lims_LR[m][i][R] = path_lims_LR[0][i-m][R]; 
+			path_lims_R[m][i] = path_lims_R[0][i-m]; 
 			if(DEBUG_EXTRA_LIMITS)
-				path_lims_LR[m][i][L] = path_lims_LR[0][i-m][L]; // Should never be used
+				path_lims_L[m][i] = path_lims_L[0][i-m]; // Should never be used
 		}
 
 //		//TODO
@@ -167,7 +179,7 @@ public class CLCSFast {
 			currLCS = arr[i][j];
 
 			//Set the L limit for this row.
-			path_lims_LR[p][i][L] = j;
+			path_lims_L[p][i] = j;
 			
 			// March Left throw rough looking for the table value to change
 			// Set the upper and lower bounds in the columns we pass through
@@ -175,8 +187,8 @@ public class CLCSFast {
 				if(DEBUG_PRINT_PATH_RECOVERY_STORY)
 					System.out.println("Move left @ x = " + j + " y = " + i);
 				//Update U,D,L,R
-				path_lims_UD[p][j][U] = i; // Limit when coming from above is inclusive.
-				path_lims_UD[p][j][D] = i; // Limit when coming from below is inclusive.
+				path_lims_U[p][j] = i; // Limit when coming from above is inclusive.
+				path_lims_D[p][j] = i; // Limit when coming from below is inclusive.
 				j--;
 			}
 
@@ -189,8 +201,8 @@ public class CLCSFast {
 				if(DEBUG_PRINT_PATH_RECOVERY_STORY)
 					System.out.println("Move corn @ x = " + j + " y = " + i);
 				//Set R to finish off row, U for column ends here
-				path_lims_LR[p][i][R] = j; 
-				path_lims_UD[p][j][U] = i;
+				path_lims_R[p][i] = j; 
+				path_lims_U[p][j] = i;
 				i--;
 			}
 			// Diagonal, or (0,0)
@@ -214,9 +226,9 @@ public class CLCSFast {
 				
 				//Update U,D,R, but not L since that was set at the beginning of the row
 				// to the upper problem and lower problem
-				path_lims_UD[p][j][U] = i;
-				path_lims_UD[p][j][D] = i;
-				path_lims_LR[p][i][R] = j;
+				path_lims_U[p][j] = i;
+				path_lims_D[p][j] = i;
+				path_lims_R[p][i] = j;
 				//Move one left, and one up, since this is a diagonal
 				j--;
 				i--;
@@ -234,8 +246,8 @@ public class CLCSFast {
 				if(DEBUG_PRINT_PATH_RECOVERY_STORY)
 					System.out.println("Move up   @ x = " + j + " y = " + i);
 				//Update L,R,  and U already set, D comes at diagonal
-				path_lims_LR[p][i][L] = j;
-				path_lims_LR[p][i][R] = j; 
+				path_lims_L[p][i] = j;
+				path_lims_R[p][i] = j; 
 				i--;
 			}
 
@@ -261,9 +273,9 @@ public class CLCSFast {
 			
 			// Update D,L,R, since top of column. U was set at bottom of column
 			// to the upper problem and lower problem
-			path_lims_UD[p][j][D] = i;
-			path_lims_LR[p][i][L] = j;
-			path_lims_LR[p][i][R] = j;
+			path_lims_D[p][j] = i;
+			path_lims_L[p][i] = j;
+			path_lims_R[p][i] = j;
 			//Move one left, and one up, since this is a diagonal
 			j--;
 			i--;
@@ -311,18 +323,18 @@ public class CLCSFast {
 		
 		
 		// Fill leftmost column in appropriate spots
-		for(i = mid; i <= path_lims_UD[lower][0][U]; i++)
+		for(i = mid; i <= path_lims_U[lower][0]; i++)
 			arr[i][0] = 0;
 		// Fill uppermost row in appropriate spots
 		j = 0;
-		while(j <= path_lims_LR[upper][mid][L]) {
+		while(j <= path_lims_L[upper][mid]) {
 			arr[mid][j] = 0;
 			j++;
 		}
 		// Put zeros above every remaining column, so that the table iterator works as intended
 		// on the top boundary. This is a good low-cost workaround.
 		while(j <= n) {
-			arr[(path_lims_UD[upper][j][D]-1)][j] = 0;
+			arr[(path_lims_D[upper][j]-1)][j] = 0;
 			j++;
 		}
 		
@@ -330,9 +342,9 @@ public class CLCSFast {
 		for (i = mid + 1; i <= mid + m; i++) {
 			//Traverse the row, starting at the left-limit imposed by the lower bounding path,
 			//but no less than 1, because of the zero column
-			int left_limit = (path_lims_LR[lower][i][R] > 1) ? path_lims_LR[lower][i][R] : 1;
+			int left_limit = (path_lims_R[lower][i] > 1) ? path_lims_R[lower][i] : 1;
 			//...path ends at right-limit of row, which is fully defined by upper bounding path.
-			int right_limit = path_lims_LR[upper][i][L];
+			int right_limit = path_lims_L[upper][i];
 			
 			//Stick a zero in the first slot to the left of the range, such that the code
 			// below works correctly on the left element when the left element is outside
@@ -353,7 +365,7 @@ public class CLCSFast {
 		
 		//Rewind to the bottom right corner.
 		// - Bottom edge is limited by either mid + m, or the lower boundary bottom right corner.
-		i = (path_lims_UD[lower][n][U] < mid + m)  ?  path_lims_UD[lower][n][U]  :  mid + m;
+		i = (path_lims_U[lower][n] < mid + m)  ?  path_lims_U[lower][n]  :  mid + m;
 		j--;
 		
 		int LCS = arr[i][j];
@@ -371,13 +383,13 @@ public class CLCSFast {
 		//Some of this may not be needed.
 		for(int a=0; a<p; a++) {
 			if(DEBUG_EXTRA_LIMITS)
-				path_lims_LR[p][a][L] = -1; //Box it out, shouldn't ever be used.
-			path_lims_LR[p][a][R] = 0;
+				path_lims_L[p][a] = -1; //Box it out, shouldn't ever be used.
+			path_lims_R[p][a] = 0;
 		}
 		for(int a=p+m+1; a<=2*m; a++) {
-			path_lims_LR[p][a][L] = n;   
+			path_lims_L[p][a] = n;   
 			if(DEBUG_EXTRA_LIMITS)
-				path_lims_LR[p][a][R] = n+1; //Box it out, shouldn't ever be used.
+				path_lims_R[p][a] = n+1; //Box it out, shouldn't ever be used.
 		}
 		
 		
@@ -388,7 +400,7 @@ public class CLCSFast {
 			currLCS = arr[i][j];
 
 			//Set the L limit for this row.
-			path_lims_LR[p][i][L] = j;
+			path_lims_L[p][i] = j;
 
 			// March Left throw rough looking for the table value to change
 			// Set the upper and lower bounds in the columns we pass through
@@ -396,8 +408,8 @@ public class CLCSFast {
 				if(DEBUG_PRINT_PATH_RECOVERY_STORY)
 					System.out.println("Move left @ x = " + j + " y = " + i);
 				//Update U,D,L,R
-				path_lims_UD[p][j][U] = i; // Limit when coming from above is inclusive.
-				path_lims_UD[p][j][D] = i; // Limit when coming from below is inclusive.
+				path_lims_U[p][j] = i; // Limit when coming from above is inclusive.
+				path_lims_D[p][j] = i; // Limit when coming from below is inclusive.
 				j--;
 			}
 
@@ -410,8 +422,8 @@ public class CLCSFast {
 				if(DEBUG_PRINT_PATH_RECOVERY_STORY)
 					System.out.println("Move corn @ x = " + j + " y = " + i);
 				//Set R to finish off row, U for column ends here
-				path_lims_LR[p][i][R] = j; 
-				path_lims_UD[p][j][U] = i;
+				path_lims_R[p][i] = j; 
+				path_lims_U[p][j] = i;
 				i--;
 			}
 			// Diagonal, or (p,0)
@@ -435,9 +447,9 @@ public class CLCSFast {
 				
 				//Update U,D,R, but not L since that was set at the beginning of the row
 				// to the upper problem and lower problem
-				path_lims_UD[p][j][U] = i;
-				path_lims_UD[p][j][D] = i;
-				path_lims_LR[p][i][R] = j;
+				path_lims_U[p][j] = i;
+				path_lims_D[p][j] = i;
+				path_lims_R[p][i] = j;
 				//Move one left, and one up, since this is a diagonal
 				j--;
 				i--;
@@ -455,8 +467,8 @@ public class CLCSFast {
 				if(DEBUG_PRINT_PATH_RECOVERY_STORY)
 					System.out.println("Move up   @ x = " + j + " y = " + i);
 				//Update L,R,  and D already set, U comes at diagonal
-				path_lims_LR[p][i][L] = j;
-				path_lims_LR[p][i][R] = j; 
+				path_lims_L[p][i] = j;
+				path_lims_R[p][i] = j; 
 				i--;
 			}
 
@@ -481,9 +493,9 @@ public class CLCSFast {
 
 			//Update D,L,R, since top of column. U was set at bottom of column.
 			// to the upper problem and lower problem
-			path_lims_UD[p][j][D] = i;
-			path_lims_LR[p][i][L] = j;
-			path_lims_LR[p][i][R] = j;
+			path_lims_D[p][j] = i;
+			path_lims_L[p][i] = j;
+			path_lims_R[p][i] = j;
 			//Move one left, and one up, since this is a diagonal
 			j--;
 			i--;
@@ -508,10 +520,10 @@ public class CLCSFast {
 				int n1 = B.length;
 				for(int p = 0; p <= m1; p++) {
 					for(int j = 0; j <= ((2*m1 > n1) ? 2*m1: n1) ; j++) {
-						path_lims_UD[p][j][0] = -2;
-						path_lims_UD[p][j][1] = -2;
-						path_lims_LR[p][j][0] = -2;
-						path_lims_LR[p][j][1] = -2;
+						path_lims_U[p][j] = -2;
+						path_lims_D[p][j] = -2;
+						path_lims_L[p][j] = -2;
+						path_lims_R[p][j] = -2;
 					}
 				}
 			}
@@ -531,28 +543,28 @@ public class CLCSFast {
 				System.out.println("U");
 				for(int p = 0; p <= m; p++) {
 					for(int j = 0; j <= n; j++) {
-						System.out.print(String.format("% 3d ", path_lims_UD[p][j][U]));
+						System.out.print(String.format("% 3d ", path_lims_U[p][j]));
 					}
 					System.out.println();
 				}
 				System.out.println("D");
 				for(int p = 0; p <= m; p++) {
 					for(int j = 0; j <= n; j++) {
-						System.out.print(String.format("% 3d ", path_lims_UD[p][j][D]));
+						System.out.print(String.format("% 3d ", path_lims_D[p][j]));
 					}
 					System.out.println();
 				}
 				System.out.println("L");
 				for(int p = 0; p <= m; p++) {
 					for(int j = 0; j <= 2*m; j++) {
-						System.out.print(String.format("% 3d ", path_lims_LR[p][j][L]));
+						System.out.print(String.format("% 3d ", path_lims_L[p][j]));
 					}
 					System.out.println();
 				}
 				System.out.println("R");
 				for(int p = 0; p <= m; p++) {
 					for(int j = 0; j <= 2*m; j++) {
-						System.out.print(String.format("% 3d ", path_lims_LR[p][j][R]));
+						System.out.print(String.format("% 3d ", path_lims_R[p][j]));
 					}
 					System.out.println();
 				}
