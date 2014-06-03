@@ -1,3 +1,13 @@
+// Judson Wilson
+// SUNetID: judsonw
+// SUID number: 05235708
+//
+// Francois Chaubard 
+// SUNetID: fchaubar
+// SUID number: 5848305
+//
+
+
 import java.util.*;
 
 public class CLCSFast {
